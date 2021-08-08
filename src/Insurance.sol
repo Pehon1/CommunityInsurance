@@ -1,17 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.0 <0.9.0;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
 
 contract Insurance {
 
+    using SafeMath for uint256;
+
     enum Ranks { Captain, FirstOfficer, SecondOfficer }
 
+    uint256 public numberOfMembers;
     mapping (address => Ranks) public memberIsOfRank;
 
+    uint256 public numberOfAdmins;
     mapping (address => bool) public admin;
 
     constructor() {
+        numberOfAdmins = 1;
         admin[msg.sender] = true;
     }
 
@@ -45,34 +52,46 @@ contract Insurance {
         _;
     }
 
+    modifier MessageSenderMustBeAddress(address addressTest) {
+        require(msg.sender == addressTest, "Address change must be message sender");
+        _;
+    }
+
     modifier AddressIsNotAdmin (address newAdmin) {
         require(admin[newAdmin] == false, "Address is admin");
         _;
     }
 
+    modifier CannotBecomeZeroAdmin() {
+        require(numberOfAdmins > 1, "Cannot proceed. Proceeding will result in 0 admin");
+        _;
+    }
 
     function AdminAdd(address newAdmin) public OnlyAdminCan AddressIsNotAdmin(newAdmin) {
         admin[newAdmin] = true;
+        numberOfAdmins = numberOfAdmins.add(1);
     }
 
-    function AdminResign(address adminAddress) public OnlyAdminCan {
+    function AdminResign(address adminAddress) public OnlyAdminCan CannotBecomeZeroAdmin {
         delete admin[adminAddress];
+        numberOfAdmins = numberOfAdmins.sub(1);
     }
 
     function MemberSignUp(address newMember, Ranks newMemberRank) public  OnlyAdminCan AddressNotMember(newMember) {
         memberIsOfRank[newMember] = newMemberRank;
+        numberOfMembers = numberOfMembers.add(1);
     }
 
     function MemberChangeRank(address member, Ranks newRank) public OnlyAdminOrMember AddressIsMember(member) {
         if (_msgSenderIsAdmin()) {
             memberIsOfRank[member] = newRank;
         } else {
-            _memberChangeOwnRank(newRank);
+            _memberChangeOwnRank(member, newRank);
         }
     }
 
-    function _memberChangeOwnRank(Ranks newRank) private MembersOnly {
-        memberIsOfRank[msg.sender] = newRank;
+    function _memberChangeOwnRank(address member, Ranks newRank) private MembersOnly MessageSenderMustBeAddress(member){
+        memberIsOfRank[member] = newRank;
     }
 
     function _msgSenderIsAdmin() private view returns (bool){
