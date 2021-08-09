@@ -3,13 +3,11 @@ pragma solidity >=0.7.0 <0.9.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-
+import "./Ranks.sol";
 
 contract Insurance {
 
     using SafeMath for uint256;
-
-    enum Ranks { Captain, FirstOfficer, SecondOfficer }
 
     uint256 public numberOfMembers;
     mapping (address => Ranks) public memberIsOfRank;
