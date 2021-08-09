@@ -42,6 +42,23 @@ describe('Membership Contract', () => {
         expect(await deployedContract.memberIsOfRank(wallet1.address)).to.equal(2)
     })
 
+    it('Owner can resign member', async () => {
+        // check that number of members is 0, since the contract just started
+        expect(await deployedContract.numberOfMembers()).to.equal(0)
+        // admin signs up a user to be a member, rank captain. 
+        await deployedContract.MemberSignUp(wallet1.address, 1)
+        // admin signs up second user to be a member, rank captain. 
+        await deployedContract.MemberSignUp(wallet2.address, 2)
+        // resigning user 1 now.
+        await deployedContract.MemberResign(wallet1.address)
+        // making sure there are only 1 member
+        expect(await deployedContract.numberOfMembers()).to.equal(1)
+        // removing user 1 again, transaction should be reverted since it doesn't exist
+        await expect(deployedContract.MemberResign(wallet1.address)).to.be.reverted
+        // making sure there are only 1 member
+        expect(await deployedContract.numberOfMembers()).to.equal(1)
+    })
+
     it('Member cannot change their own rank', async () => {
         // admin signs up 2 members.
         await deployedContract.MemberSignUp(wallet1.address, 1)

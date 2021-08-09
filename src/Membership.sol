@@ -30,12 +30,9 @@ contract Membership is Ownable {
         memberIsOfRank[member] = newRank;
     }
 
-    function _memberChangeOwnRank(address member, Ranks newRank) private onlyMembers(member) {
-        memberIsOfRank[member] = newRank;
-    }
-
-    modifier onlyMembers(address memberTest) {
-         require(msg.sender == memberTest, "Only members can do this");
-         _;
+    function MemberResign(address member) public onlyOwner {
+        require(uint(memberIsOfRank[member]) != 0, "Member doesn't exist. Cannot resign as member.");
+        delete memberIsOfRank[member];
+        numberOfMembers = numberOfMembers.sub(1);
     }
 }
