@@ -65,6 +65,13 @@ contract Claims is Ownable {
         numberOfClaimEvents = numberOfClaimEvents.add(1);
     }
 
-    
-    
+    function numberOfOpenClaimEvents() public view returns (uint256){
+        uint256 hasOpenClaimEvent = 0;
+        for (uint i = 0; i < numberOfClaimEvents; i++){
+            if (claimEvents[i].openForContribution) {
+                hasOpenClaimEvent = hasOpenClaimEvent.add(1);
+            }      
+        }
+        return hasOpenClaimEvent;
+    } 
 }

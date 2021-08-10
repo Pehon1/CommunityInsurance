@@ -32,6 +32,39 @@ describe('Claims Contract', () => {
       claimsContract = new ethers.Contract(insuranceContract.claims(), claims.abi, contractDeloyer)
     })
 
+    it('Makes sure number of claim event counter is working correctly ', async () => {
+      // admin signs up 2 members
+      await insuranceContract.AdminSignupMember(admin.address, 1)
+      await insuranceContract.AdminSignupMember(wallet1.address, 1)
+      await insuranceContract.AdminSignupMember(wallet2.address, 1)
+      // check 0 claim events
+      expect(await claimsContract.numberOfOpenClaimEvents()).to.be.equal(0)
+      // admin triggers claim event
+      await insuranceContract.AdminTriggerClaimEvent(wallet1.address)
+      //check 1 open clain event
+      expect(await claimsContract.numberOfOpenClaimEvents()).to.be.equal(1)
+      // admin triggers claim event
+      await insuranceContract.AdminTriggerClaimEvent(wallet2.address)
+      // check 2 open clain event
+      expect(await claimsContract.numberOfOpenClaimEvents()).to.be.equal(2)
+      // admin triggers claim event
+      await insuranceContract.AdminTriggerClaimEvent(admin.address)
+      // check 3 open clain event
+      expect(await claimsContract.numberOfOpenClaimEvents()).to.be.equal(3)
+      // admin now closes the claim event
+      await insuranceContract.AdminCloseClaimEvent(1, customGasOptions)
+      // check 2 open clain event
+      expect(await claimsContract.numberOfOpenClaimEvents()).to.be.equal(2)
+      // admin now closes the claim event
+      await insuranceContract.AdminCloseClaimEvent(0, customGasOptions)
+      // check 1 open clain event
+      expect(await claimsContract.numberOfOpenClaimEvents()).to.be.equal(1)
+      // admin now closes the claim event
+      await insuranceContract.AdminCloseClaimEvent(2, customGasOptions)
+      // check 1 open clain event
+      expect(await claimsContract.numberOfOpenClaimEvents()).to.be.equal(0)
+    })
+
     it('Admin can trigger claims event for member', async () => {
       // admin signs up 2 members
       await insuranceContract.AdminSignupMember(wallet1.address, 1)
