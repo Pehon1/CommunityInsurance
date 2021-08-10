@@ -86,4 +86,9 @@ contract Claims is Ownable {
         }
         return hasOpenClaimEvent;
     } 
+
+    function setMinimumContributionAmountFor(Ranks rank, uint256 amount) public onlyOwner {
+        require(rank != Ranks.None, "Cannot set amount for Rank - None");
+        ranksToContributionMinimum[rank] = amount;
+    }
 }

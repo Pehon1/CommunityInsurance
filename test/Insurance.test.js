@@ -24,6 +24,29 @@ describe('Insurance Contract', () => {
       claimsContract = new ethers.Contract(insuranceContract.claims(), Claims.abi, contractDeloyer)
     })
 
+    it('Admin can change minimum contribution amounts', async () => {
+      expect(await claimsContract.ranksToContributionMinimum(1)).to.be.equal(300)
+      await insuranceContract.AdminSetMinimumContributionFor(1, 500)
+      expect(await claimsContract.ranksToContributionMinimum(1)).to.be.equal(500)
+      expect(await claimsContract.ranksToContributionMinimum(2)).to.be.equal(200)
+      await insuranceContract.AdminSetMinimumContributionFor(2, 501)
+      expect(await claimsContract.ranksToContributionMinimum(2)).to.be.equal(501)
+      expect(await claimsContract.ranksToContributionMinimum(3)).to.be.equal(200)
+      await insuranceContract.AdminSetMinimumContributionFor(3, 502)
+      expect(await claimsContract.ranksToContributionMinimum(3)).to.be.equal(502)
+    })
+
+    it('Admin cannot change minimum amount for No rank', async () => {
+      expect(await claimsContract.ranksToContributionMinimum(0)).to.be.equal(0)
+      await expect(insuranceContract.AdminSetMinimumContributionFor(0, 500)).to.be.revertedWith('Cannot set amount for Rank - None')
+    })
+
+    it('Admin cannot change minimum amount when membership is frozen', async () => {
+      await insuranceContract.SetFreezeOnMemberChange(true)
+      expect(await claimsContract.ranksToContributionMinimum(1)).to.be.equal(300)
+      await expect(insuranceContract.AdminSetMinimumContributionFor(1, 500)).to.be.revertedWith('Membership freeze is in effect')
+    })
+
     it('Contract Deployer should become admin', async () => {
       // check that the admin's address is registered
       expect(await insuranceContract.admin(contractDeloyer.address)).to.equal(true)

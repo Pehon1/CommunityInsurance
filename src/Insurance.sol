@@ -29,6 +29,10 @@ contract Insurance {
         membershipFreeze = to;
     }
 
+    function AdminSetMinimumContributionFor(Ranks rank, uint256 amount) public OnlyAdminCan OnlyIfUnFrozen {
+        claims.setMinimumContributionAmountFor(rank, amount);
+    }
+
     function AdminCloseClaimEvent(uint256 claimId) public OnlyAdminCan {
         claims.closeClaimEvent(claimId);
         if (claims.numberOfOpenClaimEvents() == 0) {
