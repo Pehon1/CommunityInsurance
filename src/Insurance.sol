@@ -40,6 +40,10 @@ contract Insurance {
         membership.MemberChangeRank(member, newRank);
     }
 
+    function AdminResignMember(address member) public OnlyAdminCan {
+        membership.MemberResign(member);
+    }
+
     function readMemberLength() public view returns (uint256) {
         return membership.numberOfMembers();
     }
