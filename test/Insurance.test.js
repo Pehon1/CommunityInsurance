@@ -1,9 +1,11 @@
 const {expect, use} = require('chai');
 const {ContractFactory, ethers} = require('ethers');
-
+const {deployMockContract} = require('@ethereum-waffle/mock-contract');
+const IERC20 = require('../build/IERC20');
 const {deployContract, MockProvider, solidity} = require('ethereum-waffle')
 const insurance = require('../build/Insurance.json');
 const membership = require('../build/Membership.json');
+const Claims = require('../build/Claims.json');
 
 use(solidity)
 
@@ -11,13 +13,16 @@ describe('Insurance Contract', () => {
     const [contractDeloyer, admin, wallet1, wallet2] = new MockProvider().getWallets();
     var insuranceContract;
     var membershipContract;
+    var claimsContract;
+
+    const customGasOptions = { gasPrice: 1, gasLimit: 200000, value: 0 }
 
     beforeEach(async () => {
-      insuranceContract = await deployContract(contractDeloyer, insurance);
-      
-      const membershipFactory = new ContractFactory(membership.abi, membership.bytecode, contractDeloyer);
-      membershipContract = await membershipFactory.attach(insuranceContract.address)
-    });
+      const mockERC20 = await deployMockContract(contractDeloyer, IERC20.abi);
+      insuranceContract = await deployContract(contractDeloyer, insurance, [mockERC20.address]);
+      membershipContract = new ethers.Contract(insuranceContract.membership(), membership.abi, contractDeloyer)
+      claimsContract = new ethers.Contract(insuranceContract.claims(), Claims.abi, contractDeloyer)
+    })
 
     it('Contract Deployer should become admin', async () => {
       // check that the admin's address is registered
@@ -130,4 +135,78 @@ describe('Insurance Contract', () => {
       // member 1 tries to change his own rank.
       await expect(connectedWallet1.AdminChangeMemberRank(wallet2.address, 2)).to.be.reverted
     })
+
+    it('Admin can change Freeze status', async () => {
+      expect(await insuranceContract.membershipFreeze()).to.be.equal(false)
+      await insuranceContract.SetFreezeOnMemberChange(true)
+      expect(await insuranceContract.membershipFreeze()).to.be.equal(true)
+    })
+
+    it('Non admin cannot change Freeze status', async () => {
+      expect(await insuranceContract.membershipFreeze()).to.be.equal(false)
+      // member 1 connects to the contract.
+      const connectedWallet1 = insuranceContract.connect(wallet1)
+      await expect(connectedWallet1.SetFreezeOnMemberChange(true)).to.be.revertedWith('Only admin can do this')
+      expect(await insuranceContract.membershipFreeze()).to.be.equal(false)
+    })
+
+    it('Frozen membership cannot add resign or change members', async () => {
+      // admin signs up amother member
+      await insuranceContract.AdminSignupMember(wallet1.address, 1)
+      // admin freezes membership change
+      await insuranceContract.SetFreezeOnMemberChange(true)
+      // admin signs up another user
+      await expect(insuranceContract.AdminSignupMember(wallet2.address, 1)).to.be.revertedWith("Membership freeze is in effect")
+      // admin resignsa user
+      await expect(insuranceContract.AdminResignMember(wallet1.address)).to.be.revertedWith("Membership freeze is in effect")
+      // admin changes the rank of the user.
+      await expect(insuranceContract.AdminChangeMemberRank(wallet2.address, 2)).to.be.revertedWith("Membership freeze is in effect")
+    })
+
+    it('Triggering claim event freezes membership change', async () => {
+      // admin signs up 2 members
+      await insuranceContract.AdminSignupMember(wallet1.address, 1)
+      await insuranceContract.AdminSignupMember(wallet2.address, 1)
+      // admin triggers claim event
+      await insuranceContract.AdminTriggerClaimEvent(wallet1.address)
+      // check that the membership freeze is in effect
+      expect(await insuranceContract.membershipFreeze()).to.be.equal(true)
+      // for the hack of it, try to add a member
+      await expect(insuranceContract.AdminSignupMember(wallet1.address, 1, customGasOptions)).to.be.revertedWith('Membership freeze is in effect')
+    })
+
+    it('Closing claim event unfreezes membership change', async () => {
+      // admin signs up 2 members
+      await insuranceContract.AdminSignupMember(wallet1.address, 1)
+      await insuranceContract.AdminSignupMember(wallet2.address, 1)
+      // admin triggers claim event
+      await insuranceContract.AdminTriggerClaimEvent(wallet2.address, customGasOptions)
+      // admin closes claim event
+      await insuranceContract.AdminCloseClaimEvent(0, customGasOptions)
+      // check that the membership freeze is no longer in effect
+      expect(await insuranceContract.membershipFreeze()).to.be.equal(false)
+    })
+
+    it('User cannot trigger claim event', async () => {
+      // admin signs up 2 members
+      await insuranceContract.AdminSignupMember(admin.address, 1)
+      await insuranceContract.AdminSignupMember(wallet2.address, 1)
+      // user connects to the contract
+      const userConnected = insuranceContract.connect(wallet1)
+      // user triggers claim event
+      await expect(userConnected.AdminTriggerClaimEvent(wallet2.address, customGasOptions)).to.be.revertedWith('Only admin can do this')
+    })
+
+    it('User cannot close claim event', async () => {
+      // admin signs up 2 members
+      await insuranceContract.AdminSignupMember(admin.address, 1)
+      await insuranceContract.AdminSignupMember(wallet2.address, 1)
+      // admin triggers claim event
+      await insuranceContract.AdminTriggerClaimEvent(wallet2.address, customGasOptions)
+      // user connects to the contract
+      const userConnected = insuranceContract.connect(wallet1)
+      // user tries to close the contract
+      await expect(userConnected.AdminCloseClaimEvent(0, customGasOptions)).to.be.revertedWith('Only admin can do this')
+    })
+  
 })

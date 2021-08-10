@@ -1,6 +1,7 @@
 const {expect, use} = require('chai');
 const {ContractFactory, ethers} = require('ethers');
-
+const {deployMockContract} = require('@ethereum-waffle/mock-contract');
+const IERC20 = require('../build/IERC20');
 const {deployContract, MockProvider, solidity} = require('ethereum-waffle')
 const insurance = require('../build/Insurance.json');
 const membership = require('../build/Membership.json');
@@ -15,7 +16,8 @@ describe('Membership Contract', () => {
     const customGasOptions = { gasPrice: 1, gasLimit: 100000, value: 0 }
 
     beforeEach(async () => {
-        insuranceContract = await deployContract(contractDeloyer, insurance);
+        const mockERC20 = await deployMockContract(contractDeloyer, IERC20.abi);
+        insuranceContract = await deployContract(contractDeloyer, insurance, [mockERC20.address]);
         membershipContract = new ethers.Contract(insuranceContract.membership(), membership.abi, contractDeloyer)
     });
 

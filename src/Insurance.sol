@@ -3,21 +3,40 @@ pragma solidity >=0.7.0 <0.9.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./Ranks.sol";
+import "./Claims.sol";
 import "./Membership.sol";
 
 contract Insurance {
 
     using SafeMath for uint256;
 
+    Claims public claims;
     Membership public membership;
+
+    bool public membershipFreeze;
 
     uint256 public numberOfAdmins;
     mapping (address => bool) public admin;
 
-    constructor() {
+    constructor(address settlementToken) {
         numberOfAdmins = 1;
         admin[msg.sender] = true;
         membership = new Membership(address(this));
+        claims = new Claims(address(this), address(membership), settlementToken);
+    }
+
+    function SetFreezeOnMemberChange(bool to) public OnlyAdminCan {
+        membershipFreeze = to;
+    }
+
+    function AdminCloseClaimEvent(uint256 claimId) public OnlyAdminCan {
+        claims.closeClaimEvent(claimId);
+        SetFreezeOnMemberChange(false);
+    }
+
+    function AdminTriggerClaimEvent(address claimAddress) public OnlyAdminCan {
+        claims.triggerClaimEvent(claimAddress);
+        SetFreezeOnMemberChange(true);
     }
 
     function AdminAdd(address newAdmin) public OnlyAdminCan {
@@ -32,15 +51,15 @@ contract Insurance {
         numberOfAdmins = numberOfAdmins.sub(1);
     }
 
-    function AdminSignupMember(address newMember, Ranks newMemberRank) public OnlyAdminCan {
+    function AdminSignupMember(address newMember, Ranks newMemberRank) public OnlyAdminCan OnlyIfUnFrozen {
         membership.MemberSignUp(newMember, newMemberRank);
     }
 
-    function AdminChangeMemberRank(address member, Ranks newRank) public OnlyAdminCan {
+    function AdminChangeMemberRank(address member, Ranks newRank) public OnlyAdminCan OnlyIfUnFrozen {
         membership.MemberChangeRank(member, newRank);
     }
 
-    function AdminResignMember(address member) public OnlyAdminCan {
+    function AdminResignMember(address member) public OnlyAdminCan OnlyIfUnFrozen {
         membership.MemberResign(member);
     }
 
@@ -58,6 +77,11 @@ contract Insurance {
 
     modifier OnlyAdminCan() {
         require(_msgSenderIsAdmin(), "Only admin can do this");
+        _;
+    }
+
+    modifier OnlyIfUnFrozen() {
+        require(membershipFreeze == false, "Membership freeze is in effect");
         _;
     }
 }

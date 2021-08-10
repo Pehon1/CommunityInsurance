@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.0 <0.9.0;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -18,6 +19,10 @@ contract Membership is Ownable {
 
     constructor(address _insuranceContract) {
         insurance = Insurance(_insuranceContract);
+    }
+
+    function Members() public view returns(address[] memory) {
+        return members;
     }
 
     function MemberSignUp(address newMember, Ranks newMemberRank) public onlyOwner {
