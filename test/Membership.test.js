@@ -78,4 +78,33 @@ describe('Membership Contract', () => {
         // first user tries to change the rank of the second user, and it fails. 
         await expect(connectedWallet1.MemberChangeRank(wallet2.address, 2)).to.be.reverted
     })
+
+    it('Adding and removing members does not screw up the array', async () => {
+        // admin signs up 4 members
+        await membershipContract.MemberSignUp(contractDeloyer.address, 1)
+        await membershipContract.MemberSignUp(admin.address, 1)
+        await membershipContract.MemberSignUp(wallet1.address, 1)
+        await membershipContract.MemberSignUp(wallet2.address, 1)
+        // checks that each of the address indexes are correct
+        expect(await membershipContract.members(0)).to.be.equal(contractDeloyer.address)
+        expect(await membershipContract.members(1)).to.be.equal(admin.address)
+        expect(await membershipContract.members(2)).to.be.equal(wallet1.address)
+        expect(await membershipContract.members(3)).to.be.equal(wallet2.address)
+        // admin removes the second person
+        await membershipContract.MemberResign(admin.address)
+        // checks that each of the address are still there.
+        expect(await membershipContract.members(0)).to.be.equal(contractDeloyer.address)
+        expect(await membershipContract.members(1)).to.be.equal(wallet2.address)
+        expect(await membershipContract.members(2)).to.be.equal(wallet1.address)
+        await expect(membershipContract.members(3)).to.be.reverted
+        
+        //admin removes the first person
+        await membershipContract.MemberResign(contractDeloyer.address)
+
+        // checks that each of the address are still there.
+         expect(await membershipContract.members(0)).to.be.equal(wallet1.address)
+         expect(await membershipContract.members(1)).to.be.equal(wallet2.address)
+         await expect(membershipContract.members(2)).to.be.reverted
+         await expect(membershipContract.members(3)).to.be.reverted
+    })
 })

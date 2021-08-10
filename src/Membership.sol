@@ -14,6 +14,7 @@ contract Membership is Ownable {
 
     uint256 public numberOfMembers;
     mapping (address => Ranks) public memberIsOfRank;
+    address[] public members;
 
     constructor(address _insuranceContract) {
         insurance = Insurance(_insuranceContract);
@@ -23,6 +24,7 @@ contract Membership is Ownable {
         require(uint(memberIsOfRank[newMember]) == 0, "Member already signed up. Cannot sign-up again.");
         memberIsOfRank[newMember] = newMemberRank;
         numberOfMembers = numberOfMembers.add(1);
+        members.push(newMember);
     }
 
     function MemberChangeRank(address member, Ranks newRank) public onlyOwner {
@@ -34,5 +36,14 @@ contract Membership is Ownable {
         require(uint(memberIsOfRank[member]) != 0, "Member doesn't exist. Cannot resign as member.");
         delete memberIsOfRank[member];
         numberOfMembers = numberOfMembers.sub(1);
+
+        for (uint i = 0; i<members.length-1; i++){
+            if (members[i] == member) {
+                delete members[i];
+                members[i] = members[members.length - 1];
+                members.pop();
+                break;
+            }      
+        }
     }
 }
