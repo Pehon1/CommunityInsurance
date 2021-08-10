@@ -31,7 +31,9 @@ contract Insurance {
 
     function AdminCloseClaimEvent(uint256 claimId) public OnlyAdminCan {
         claims.closeClaimEvent(claimId);
-        SetFreezeOnMemberChange(false);
+        if (claims.numberOfOpenClaimEvents() == 0) {
+            SetFreezeOnMemberChange(false);
+        }
     }
 
     function AdminTriggerClaimEvent(address claimAddress) public OnlyAdminCan {

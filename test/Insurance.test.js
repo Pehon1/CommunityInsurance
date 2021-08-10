@@ -208,5 +208,24 @@ describe('Insurance Contract', () => {
       // user tries to close the contract
       await expect(userConnected.AdminCloseClaimEvent(0, customGasOptions)).to.be.revertedWith('Only admin can do this')
     })
+
+    it('If there is one open claim event left during closure of another, membership change will remain frozen.', async () => {
+      // admin signs up 2 members
+      await insuranceContract.AdminSignupMember(wallet1.address, 1)
+      await insuranceContract.AdminSignupMember(wallet2.address, 1)
+      // admin triggers claim event
+      await insuranceContract.AdminTriggerClaimEvent(wallet1.address, customGasOptions)
+      await insuranceContract.AdminTriggerClaimEvent(wallet2.address, customGasOptions)
+      // admin closes one of the claim event
+      await insuranceContract.AdminCloseClaimEvent(0)
+      // check that membership freeze is still in effect
+      expect(await insuranceContract.membershipFreeze()).to.be.true
+      // tries to add a member
+      await expect(insuranceContract.AdminSignupMember(admin.address, 1, customGasOptions)).to.be.revertedWith('Membership freeze is in effect')
+      // admin closes the last of the claim event
+      await insuranceContract.AdminCloseClaimEvent(1)
+      // check that membership freeze is still in effect
+      expect(await insuranceContract.membershipFreeze()).to.be.false
+    })
   
 })
