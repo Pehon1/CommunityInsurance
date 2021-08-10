@@ -5,15 +5,17 @@ const {ContractFactory, ethers} = require('ethers');
 const {deployContract, MockProvider, solidity} = require('ethereum-waffle')
 const insurance = require('../build/Insurance.json');
 const claims = require('../build/Claims.json');
+const membership = require('../build/Membership.json');
 
 const ERC20 = require('../build/SimpleToken.json');
 
 use(solidity)
 
 describe('Claims Contract', () => {
-    const [contractDeloyer, admin, wallet1, wallet2] = new MockProvider().getWallets();
+    const [contractDeloyer, admin, wallet1, wallet2, wallet3, wallet4, wallet5] = new MockProvider().getWallets();
     
     var insuranceContract;
+    var membershipContract;
     var claimsContract;
     var mockERC20;
 
@@ -24,12 +26,89 @@ describe('Claims Contract', () => {
       mockERC20 =  await deployContract(contractDeloyer, ERC20)
       // distribute the money
       Promise.all([
-        await mockERC20.transfer(admin.address, 200),
-        await mockERC20.transfer(wallet1.address, 200),
-        await mockERC20.transfer(wallet2.address, 200),
+        await mockERC20.transfer(admin.address, 1000),
+        await mockERC20.transfer(wallet1.address, 1000),
+        await mockERC20.transfer(wallet2.address, 1000),
+        await mockERC20.transfer(wallet3.address, 1000),
+        await mockERC20.transfer(wallet4.address, 1000),
+        await mockERC20.transfer(wallet5.address, 100),
       ])
       insuranceContract = await deployContract(contractDeloyer, insurance, [mockERC20.address]);
       claimsContract = new ethers.Contract(insuranceContract.claims(), claims.abi, contractDeloyer)
+      membershipContract = new ethers.Contract(insuranceContract.membership(), membership.abi, contractDeloyer)
+    })
+
+    it('Member of different ranks contribute correct amounts', async () => {
+      Promise.all([
+        // admin signs up 2 members
+        await insuranceContract.AdminSignupMember(wallet1.address, 1, customGasOptions),
+        await insuranceContract.AdminSignupMember(wallet2.address, 2, customGasOptions),
+        await insuranceContract.AdminSignupMember(wallet3.address, 3, customGasOptions),
+        await insuranceContract.AdminSignupMember(wallet4.address, 1, customGasOptions),
+        // admin triggers claim event
+        await insuranceContract.AdminTriggerClaimEvent(wallet4.address, customGasOptions),
+      ])
+      expect(await claimsContract.memberMinimumContributionAmount(wallet1.address)).to.be.equal(300)
+      expect(await claimsContract.memberMinimumContributionAmount(wallet2.address)).to.be.equal(200)
+      expect(await claimsContract.memberMinimumContributionAmount(wallet3.address)).to.be.equal(200)
+
+      //user 1 sends approval to spend
+      const user1ERC20 = mockERC20.connect(wallet1)
+      await user1ERC20.approve(claimsContract.address, 500)
+      const user1ClaimsContract = claimsContract.connect(wallet1)
+
+      //user 2 sends approval to spend
+      const user2ERC20 = mockERC20.connect(wallet2)
+      await user2ERC20.approve(claimsContract.address, 500)
+      const user2ClaimsContract = claimsContract.connect(wallet2)
+
+      //user 3 sends approval to spend
+      const user3ERC20 = mockERC20.connect(wallet3)
+      await user3ERC20.approve(claimsContract.address, 500)
+      const user3ClaimsContract = claimsContract.connect(wallet3)
+
+      // user 1 contributes to the claim
+      await user1ClaimsContract.contributeToClaim(0)
+      // user 2 contributes to the claim
+      await user2ClaimsContract.contributeToClaim(0)
+      // user 3 contributes to the claim
+      await user3ClaimsContract.contributeToClaim(0)
+
+      // checks the balance in the contract
+      expect(await mockERC20.balanceOf(claimsContract.address)).to.be.equal(700)
+      // checks the balance in user1
+      expect(await mockERC20.balanceOf(wallet1.address)).to.be.equal(700)
+      expect(await mockERC20.balanceOf(wallet2.address)).to.be.equal(800)
+      expect(await mockERC20.balanceOf(wallet3.address)).to.be.equal(800)
+
+      // checks that the claim event parameter is updatd
+      const claimEvent = await claimsContract.claimEvents(0)
+      expect(claimEvent.claimAddress).to.be.equal(wallet4.address)
+      expect(claimEvent.contributionsSoFar).to.be.equal(700)
+      expect(await user1ClaimsContract.contributionsToClaim(0, wallet1.address)).to.be.equal(300)
+      expect(await user1ClaimsContract.contributionsToClaim(0, wallet2.address)).to.be.equal(200)
+      expect(await user1ClaimsContract.contributionsToClaim(0, wallet3.address)).to.be.equal(200)
+    })
+
+    it('Makes a contribution when account has too little money', async () => {
+      Promise.all([
+        // admin signs up 2 members
+        await insuranceContract.AdminSignupMember(wallet1.address, 1, customGasOptions),
+        await insuranceContract.AdminSignupMember(wallet2.address, 2, customGasOptions),
+        await insuranceContract.AdminSignupMember(wallet5.address, 3, customGasOptions),
+        // admin triggers claim event
+        await insuranceContract.AdminTriggerClaimEvent(wallet1.address, customGasOptions),
+      ])
+      expect(await claimsContract.memberMinimumContributionAmount(wallet1.address)).to.be.equal(300)
+      expect(await claimsContract.memberMinimumContributionAmount(wallet2.address)).to.be.equal(200)
+      expect(await claimsContract.memberMinimumContributionAmount(wallet5.address)).to.be.equal(200)
+
+      //user 5 sends approval to spend
+      const user5ERC20 = mockERC20.connect(wallet5)
+      await user5ERC20.approve(claimsContract.address, 500)
+      const user5ClaimsContract = claimsContract.connect(wallet5)
+      // user 5 contributes to the claim
+      await expect(user5ClaimsContract.contributeToClaim(0)).to.revertedWith('ERC20: transfer amount exceeds balance')
     })
 
     it('Makes sure number of claim event counter is working correctly ', async () => {
@@ -110,9 +189,9 @@ describe('Claims Contract', () => {
       await insuranceContract.AdminTriggerClaimEvent(wallet1.address)
       // user 2 sends approval to spend
       const user2ERC20 = mockERC20.connect(wallet2)
-      await user2ERC20.approve(claimsContract.address, 200)
+      await user2ERC20.approve(claimsContract.address, 300)
 
-      expect(await user2ERC20.allowance(wallet2.address, claimsContract.address)).to.be.equal(200)
+      expect(await user2ERC20.allowance(wallet2.address, claimsContract.address)).to.be.equal(300)
 
       // user2 connects to the claim contract
       const user2ClaimsContract = claimsContract.connect(wallet2)
@@ -120,15 +199,15 @@ describe('Claims Contract', () => {
       await user2ClaimsContract.contributeToClaim(0)
 
       // checks the balance in the contract
-      expect(await mockERC20.balanceOf(claimsContract.address)).to.be.equal(200)
+      expect(await mockERC20.balanceOf(claimsContract.address)).to.be.equal(300)
       // checks the balance in user2
-      expect(await mockERC20.balanceOf(wallet2.address)).to.be.equal(0)
+      expect(await mockERC20.balanceOf(wallet2.address)).to.be.equal(700)
 
       // checks that the claim event parameter is updatd
       const claimEvent = await claimsContract.claimEvents(0)
       expect(claimEvent.claimAddress).to.be.equal(wallet1.address)
-      expect(claimEvent.contributionsSoFar).to.be.equal(200)
-      expect(await user2ClaimsContract.contributionsToClaim(0, wallet2.address)).to.be.equal(200)
+      expect(claimEvent.contributionsSoFar).to.be.equal(300)
+      expect(await user2ClaimsContract.contributionsToClaim(0, wallet2.address)).to.be.equal(300)
     })
 
     it('Non Member cannot contribute to claims event', async () => {
@@ -201,7 +280,7 @@ describe('Claims Contract', () => {
       // checks the balance in the contract
       expect(await mockERC20.balanceOf(claimsContract.address)).to.be.equal(0)
       // checks the balance in user2
-      expect(await mockERC20.balanceOf(wallet2.address)).to.be.equal(200)
+      expect(await mockERC20.balanceOf(wallet2.address)).to.be.equal(1000)
 
       // checks that the claim event parameter is correct
       const claimEvent = await claimsContract.claimEvents(0)
@@ -216,16 +295,16 @@ describe('Claims Contract', () => {
       await insuranceContract.AdminSignupMember(wallet2.address, 1)
 
       // test to make sure this account's balance is really the inital setup amount
-      expect(await mockERC20.balanceOf(wallet1.address)).to.be.equal(200)
+      expect(await mockERC20.balanceOf(wallet1.address)).to.be.equal(1000)
 
       // admin triggers claim event
       await insuranceContract.AdminTriggerClaimEvent(wallet1.address)
       
       // user 2 sends approval to spend
       const user2ERC20 = mockERC20.connect(wallet2)
-      await user2ERC20.approve(claimsContract.address, 200)
+      await user2ERC20.approve(claimsContract.address, 300)
 
-      expect(await user2ERC20.allowance(wallet2.address, claimsContract.address)).to.be.equal(200)
+      expect(await user2ERC20.allowance(wallet2.address, claimsContract.address)).to.be.equal(300)
 
       // user2 connects to the claim contract
       const user2ClaimsContract = claimsContract.connect(wallet2)
@@ -233,7 +312,7 @@ describe('Claims Contract', () => {
       await user2ClaimsContract.contributeToClaim(0, customGasOptions)
 
       // checks that the contract address balance is correct
-      expect(await mockERC20.balanceOf(claimsContract.address)).to.be.equal(200)
+      expect(await mockERC20.balanceOf(claimsContract.address)).to.be.equal(300)
 
       // admin now closes the claim event
       await insuranceContract.AdminCloseClaimEvent(0, customGasOptions)
@@ -241,7 +320,7 @@ describe('Claims Contract', () => {
       // check that contract balance is 0
       expect(await mockERC20.balanceOf(claimsContract.address)).to.be.equal(0)
       // check that claimer balance is +200
-      expect(await mockERC20.balanceOf(wallet1.address)).to.be.equal(400)
+      expect(await mockERC20.balanceOf(wallet1.address)).to.be.equal(1300)
 
       // check that mmebership is indeed open for changes again
       expect(await insuranceContract.membershipFreeze()).to.be.equal(false)
@@ -263,7 +342,7 @@ describe('Claims Contract', () => {
       await insuranceContract.AdminSignupMember(wallet2.address, 1)
 
       // test to make sure this account's balance is really the inital setup amount
-      expect(await mockERC20.balanceOf(wallet1.address)).to.be.equal(200)
+      expect(await mockERC20.balanceOf(wallet1.address)).to.be.equal(1000)
 
       // admin triggers claim event
       await insuranceContract.AdminTriggerClaimEvent(wallet1.address)

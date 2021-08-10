@@ -6,6 +6,7 @@ import "./Insurance.sol";
 import "./Membership.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./Ranks.sol";
 
 contract Claims is Ownable {
 
@@ -19,6 +20,8 @@ contract Claims is Ownable {
         bool openForContribution;
     }
 
+    mapping (Ranks => uint256) public ranksToContributionMinimum;
+
     Insurance public insurance;
     Membership public membership;
 
@@ -31,14 +34,23 @@ contract Claims is Ownable {
         insurance = Insurance(_insuranceContract);
         membership = Membership(_membershipContract);
         settlementToken = IERC20(_settlementToken);
+        ranksToContributionMinimum[Ranks.Captain] = 300;
+        ranksToContributionMinimum[Ranks.FirstOfficer] = 200;
+        ranksToContributionMinimum[Ranks.SecondOfficer] = 200;
+    }
+
+    function memberMinimumContributionAmount(address member) public view returns (uint256) {
+        require(membership.memberIsOfRank(member) != Ranks(0), "Address not member");
+        Ranks memberRank = membership.memberIsOfRank(member);
+        return ranksToContributionMinimum[Ranks(memberRank)];
     }
 
     function contributeToClaim(uint256 claimId) public {
-        require(membership.memberIsOfRank(msg.sender) != Ranks(0), "Address not member");
+        require(membership.memberIsOfRank(_msgSender()) != Ranks(0), "Address not member");
         require(claimEvents[claimId].openForContribution, "Claim event has closed");
-        settlementToken.transferFrom(_msgSender(), address(this), 200);
-        claimEvents[claimId].contributions[_msgSender()] = 200;
-        claimEvents[claimId].contributionsSoFar = claimEvents[claimId].contributionsSoFar.add(200);
+        settlementToken.transferFrom(_msgSender(), address(this), memberMinimumContributionAmount(_msgSender()));
+        claimEvents[claimId].contributions[_msgSender()] = memberMinimumContributionAmount(_msgSender());
+        claimEvents[claimId].contributionsSoFar = claimEvents[claimId].contributionsSoFar.add(memberMinimumContributionAmount(_msgSender()));
     }
 
     function contributionsToClaim(uint256 clainId, address contributor) public view returns (uint) {
