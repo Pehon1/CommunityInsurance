@@ -87,7 +87,9 @@ While the process of having a committee consider the legitimacy of a claim isn't
 
 ## Contributions
 
-Please feel free to contribute to this project. 
+Please feel free to contribute to this project. All contributions big or small, tech or non-tech welcomed. Even this README requires contributions, and non-tech contributors can help out here =)
+
+To contribute: 
 
 1. Clone the project.
 1. Make your changes. 
