@@ -2,7 +2,7 @@
 
 ## Inspiration
 
-Work on this project was inspired by the Pilot for Pilots and PCare, both community based insurance ([what is?](https://www.who.int/news-room/fact-sheets/detail/community-based-health-insurance-2020)) initiatives by the Pilot commumity in Singapore.
+Work on this project was inspired by the Pilot for Pilots and PCare, both community based insurance ([what is?](https://www.who.int/news-room/fact-sheets/detail/community-based-health-insurance-2020)) initiatives by the Pilot commumity in Singapore. On behalf of all members, we thank administrators for both initiatives for their contributions to the community. 
 
 ---
 
@@ -104,9 +104,9 @@ Please feel free to contribute to this project. All contributions big or small, 
 
 To contribute: 
 
-1. Fork the project.
+1. [Fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) the project.
 1. Make your changes. 
-1. Send a pull request.
+1. Send a [pull request](https://github.com/Pehon1/CommunityInsurance).
 1. I'll review them. 
 
 All contributors will be recognised in a Contributors section in this README file.
