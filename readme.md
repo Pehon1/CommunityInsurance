@@ -104,7 +104,7 @@ Please feel free to contribute to this project. All contributions big or small, 
 
 To contribute: 
 
-1. Clone the project.
+1. Fork the project.
 1. Make your changes. 
 1. Send a pull request.
 1. I'll review them. 
