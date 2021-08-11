@@ -31,6 +31,7 @@ The purpose of this project is to serve as a proof-of-concept, to show that comm
 ### Immediate
 
 - [x] Unit Tests (ongoing)
+- [ ] Implement timestamps instead of using block number
 - [ ] Documentation
 - [ ] Time as member before a claim event can be triggered for this member
 - [ ] Web3 frontend
@@ -42,7 +43,19 @@ The purpose of this project is to serve as a proof-of-concept, to show that comm
 
 ### Possible Improvements
 
+#### DAO
+
 The current implementations allows any nominated admins to trigger (or end) claim events. A possible alternative would implement a DAO type voting system before key events (such as triggering of claim events) must be voted on by members before such events can be triggered. 
+
+#### NFT for membership tracking
+
+Membership can be tracked using NFTs. Utilising ERC721's tokenId, admin can match NFT's tokenId to registered members. The advantage of using NFTs to track membership is that members are not tied to any single address. Should they choose, they can transfer the NFT over to a new wallet, thereby registering the new address as the new member's address. 
+
+Implementing NFT for membership tracking would address the situation where any users loses control of their wallet. The ERC721 contract could potentially allow a DAO or Admin to force transfer the membership NFT without needing approval from a wallet. 
+
+Member's details such as rank could also be tracked as meta data. Following the current consideration where only admin is allowed to change ranks of a member, a DAO or admin contract could make changes into an ERC721's metadata.
+
+Also technical advantages aside, having an NFT could simply be a cool proof of membership in a unique fraternity. 
 
 ---
 

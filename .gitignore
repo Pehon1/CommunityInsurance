@@ -3,3 +3,4 @@ flatten/
 cache/
 node_modules/
 artifacts/
+*.code-workspace
