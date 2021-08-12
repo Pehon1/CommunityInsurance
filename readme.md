@@ -30,7 +30,13 @@ The purpose of this project is to serve as a proof-of-concept, to show that comm
 
 ### Testnet
 
-Contract has been deployed to the Ropsten Testnet at 0x212561ff2d1b8653caf7eead69ce44810ea16be8
+The following contracts have been deployed to the Ropsten Testnet
+- Insurance contract 0xc2896F22578d6d043D2f0DbdF333A446C9CA5D6D 
+- Membership contract 0x3BE99e006247CAf0AD5bcBc05fD0E2c2E0a0A89C
+- Claims contract 0xcD7455e88eB967EC9ADebd259cEf6075E5377BD1
+
+For reference, the following is the test USDC
+0x07865c6e87b9f70255377e024ace6630c1eaa37f
 
 ### Immediate
 
