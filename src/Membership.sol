@@ -2,10 +2,10 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
+import "./Ranks.sol";
+import "./Insurance.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./Insurance.sol";
-import "./Ranks.sol";
 
 contract Membership is Ownable {
 
@@ -17,7 +17,7 @@ contract Membership is Ownable {
     mapping (address => Ranks) public memberIsOfRank;
     address[] public members;
 
-    constructor(address _insuranceContract) {
+    function SetLinkedContracts(address _insuranceContract) public onlyOwner {
         insurance = Insurance(_insuranceContract);
     }
 

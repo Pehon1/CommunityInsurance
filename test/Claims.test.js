@@ -22,7 +22,6 @@ describe('Claims Contract', () => {
     const customGasOptions = { gasPrice: 1, gasLimit: 200000, value: 0 }
 
     beforeEach(async () => {
-      // mockERC20 = await deployMockContract(contractDeloyer, IERC20.abi);
       mockERC20 =  await deployContract(contractDeloyer, ERC20)
       // distribute the money
       Promise.all([
@@ -33,9 +32,30 @@ describe('Claims Contract', () => {
         await mockERC20.transfer(wallet4.address, 1000),
         await mockERC20.transfer(wallet5.address, 100),
       ])
-      insuranceContract = await deployContract(contractDeloyer, insurance, [mockERC20.address]);
-      claimsContract = new ethers.Contract(insuranceContract.claims(), claims.abi, contractDeloyer)
-      membershipContract = new ethers.Contract(insuranceContract.membership(), membership.abi, contractDeloyer)
+
+      // deploying all 3 contracts
+      insuranceContract = await deployContract(contractDeloyer, insurance);
+      claimsContract = await deployContract(contractDeloyer, claims, [mockERC20.address])
+      membershipContract = await deployContract(contractDeloyer, membership)
+
+      // linking insurance contract to its related contracts.
+      await insuranceContract.SetLinkedContracts(membershipContract.address, claimsContract.address)
+      
+      // linking claims contract
+      await claimsContract.SetLinkedContracts(membershipContract.address, insuranceContract.address)
+      // setting owner of claims contract to insurance contract
+      await claimsContract.transferOwnership(insuranceContract.address)
+
+      // linking membership contract
+      await membershipContract.SetLinkedContracts(insuranceContract.address)
+      // setting owner of contract to insurance contract
+      await membershipContract.transferOwnership(insuranceContract.address)
+    })
+
+    it('Non member should not be allowed to set contract addresses', async () => {
+      // user 1 connects to the address
+      const user1ConnectedToContract = await claimsContract.connect(wallet1)
+      await expect(user1ConnectedToContract.SetLinkedContracts(membershipContract.address, membershipContract.address)).to.be.revertedWith('Ownable: caller is not the owner')
     })
 
     it('Member of different ranks contribute correct amounts', async () => {

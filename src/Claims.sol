@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.0 <0.9.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./Ranks.sol";
 import "./Insurance.sol";
 import "./Membership.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./Ranks.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Claims is Ownable {
 
@@ -30,13 +30,16 @@ contract Claims is Ownable {
 
     IERC20 public settlementToken;
 
-    constructor(address _insuranceContract, address _membershipContract, address _settlementToken) {
-        insurance = Insurance(_insuranceContract);
-        membership = Membership(_membershipContract);
+    constructor(address _settlementToken) {
         settlementToken = IERC20(_settlementToken);
         ranksToContributionMinimum[Ranks.Captain] = 300;
         ranksToContributionMinimum[Ranks.FirstOfficer] = 200;
         ranksToContributionMinimum[Ranks.SecondOfficer] = 200;
+    }
+
+    function SetLinkedContracts(address _membershipContract, address _insuranceContract) public onlyOwner {
+        insurance = Insurance(_insuranceContract);
+        membership = Membership(_membershipContract);
     }
 
     function memberMinimumContributionAmount(address member) public view returns (uint256) {
