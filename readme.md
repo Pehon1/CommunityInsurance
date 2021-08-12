@@ -26,7 +26,11 @@ The purpose of this project is to serve as a proof-of-concept, to show that comm
 
 ---
 
-## Project Todo
+## Project Mamnagement
+
+### Testnet
+
+Contract has been deployed to the Ropsten Testnet at 0x212561ff2d1b8653caf7eead69ce44810ea16be8
 
 ### Immediate
 
