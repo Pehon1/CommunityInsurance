@@ -5,51 +5,21 @@ const IERC20 = require('../build/IERC20');
 const {deployContract, MockProvider, solidity} = require('ethereum-waffle')
 const insurance = require('../build/Insurance.json');
 const membership = require('../build/Membership.json');
-const claims = require('../build/Claims.json')
-
 
 use(solidity)
 
 describe('Membership Contract', () => {
     const [contractDeloyer, admin, wallet1, wallet2] = new MockProvider().getWallets();
-
     var insuranceContract;
     var membershipContract;
-    var claimsContract;
 
     const customGasOptions = { gasPrice: 1, gasLimit: 100000, value: 0 }
 
-    var mockERC20
-
-    before(async () => {
-        mockERC20 = await deployMockContract(contractDeloyer, IERC20.abi);
-    })
-
     beforeEach(async () => {
-        // deploying all 3 contracts
-        insuranceContract = await deployContract(contractDeloyer, insurance);
-        claimsContract = await deployContract(contractDeloyer, claims, [mockERC20.address])
-        membershipContract = await deployContract(contractDeloyer, membership)
-
-        // linking insurance contract to its related contracts.
-        await insuranceContract.SetLinkedContracts(membershipContract.address, claimsContract.address)
-        
-        // linking claims contract
-        await claimsContract.SetLinkedContracts(membershipContract.address, insuranceContract.address)
-        // setting owner of claims contract to insurance contract
-        await claimsContract.transferOwnership(insuranceContract.address)
-
-        // linking membership contract
-        await membershipContract.SetLinkedContracts(insuranceContract.address)
-        // setting owner of contract to insurance contract
-        await membershipContract.transferOwnership(insuranceContract.address)
+        const mockERC20 = await deployMockContract(contractDeloyer, IERC20.abi);
+        insuranceContract = await deployContract(contractDeloyer, insurance, [mockERC20.address]);
+        membershipContract = new ethers.Contract(insuranceContract.membership(), membership.abi, contractDeloyer)
     });
-
-    it('Non member should not be allowed to set contract addresses', async () => {
-        // user 1 connects to the address
-        const user1ConnectedToContract = await membershipContract.connect(wallet1)
-        await expect(user1ConnectedToContract.SetLinkedContracts(membershipContract.address)).to.be.revertedWith('Ownable: caller is not the owner')
-    })
 
     it('Member cannot sign up another member', async () => {
         //connect non owner to the contract

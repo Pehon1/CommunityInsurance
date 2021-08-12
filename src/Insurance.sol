@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.0 <0.9.0;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./Ranks.sol";
 import "./Claims.sol";
 import "./Membership.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract Insurance is Ownable {
+contract Insurance {
 
     using SafeMath for uint256;
 
@@ -19,14 +18,11 @@ contract Insurance is Ownable {
     uint256 public numberOfAdmins;
     mapping (address => bool) public admin;
 
-    constructor() {
+    constructor(address settlementToken) {
         numberOfAdmins = 1;
         admin[msg.sender] = true;
-    }
-
-    function SetLinkedContracts(address _membershipContract, address _claimsContract) public onlyOwner {
-        claims = Claims(_claimsContract);
-        membership = Membership(_membershipContract);
+        membership = new Membership(address(this));
+        claims = new Claims(address(this), address(membership), settlementToken);
     }
 
     function SetFreezeOnMemberChange(bool to) public OnlyAdminCan {
